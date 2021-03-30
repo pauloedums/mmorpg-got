@@ -1,56 +1,77 @@
-module.exports.jogo = (application, req, res) => {
-    if(req.session.autorizado !== true) {
-        return;
+module.exports.jogo = function(application, req, res){
+
+    if(req.session.autorizado !== true){
+        res.send('Usuário precisa fazer login');
+        return;   
     }
 
-    var comando_invalido = 'N';
-
-    if(req.query.comando_invalido == 'S'){
-        comando_invalido = 'S';
+    var msg = '';
+    if(req.query.msg != ''){
+        msg = req.query.msg;
     }
 
     var usuario = req.session.usuario;
     var casa = req.session.casa;
 
-	var connection = application.config.dbConnection;
-	var JogoDAO = new application.app.models.JogoDAO(connection);
+    var connection = application.config.dbConnection;
+    var JogoDAO = new application.app.models.JogoDAO(connection);
 
-    JogoDAO.iniciaJogo(res, usuario, casa, comando_invalido);
-
+    JogoDAO.iniciaJogo(res, usuario, casa, msg);
 }
 
-module.exports.sair = (application, req, res) => {
-    req.session.destroy((err) => {
-      res.render('index', {validacao: {}});
+module.exports.sair = function(application, req, res){
+    req.session.destroy(function(err){
+        res.render('index', { validacao: {} });
     });
 }
 
-module.exports.suditos = (application, req, res) => {
-    if(req.session.autorizado !== true) {
-        return;
+module.exports.suditos = function(application, req, res){
+    if(req.session.autorizado !== true){
+        res.send('Usuário precisa fazer login');
+        return;   
     }
-    res.render('aldeoes', {validacao: {}});
+    
+    res.render('aldeoes', { validacao: {} });
 }
 
-module.exports.pergaminhos = (application, req, res) => {
-    if(req.session.autorizado !== true) {
-        return;
+module.exports.pergaminhos = function(application, req, res){
+    if(req.session.autorizado !== true){
+        res.send('Usuário precisa fazer login');
+        return;   
     }
-    res.render('pergaminhos', {validacao: {}});
+
+    /* recuperar as acoes inseridas no banco dedados */
+    var connection = application.config.dbConnection;
+    var JogoDAO = new application.app.models.JogoDAO(connection);
+
+    var usuario = req.session.usuario;
+
+    JogoDAO.getAcoes(usuario, res);
 }
 
-module.exports.ordernar_acao_sudito = (application, req, res) => {
-
+module.exports.ordenar_acao_sudito = function(application, req, res){
+    if(req.session.autorizado !== true){
+        res.send('Usuário precisa fazer login');
+        return;   
+    }
+    
     var dadosForm = req.body;
 
     req.assert('acao', 'Ação deve ser informada').notEmpty();
     req.assert('quantidade', 'Quantidade deve ser informada').notEmpty();
 
-    var errors = req.validationErrors();
+    var erros = req.validationErrors();
 
-    if(errors){
-        res.redirect('jogo?comando_invalido=S');
+    if(erros){
+        res.redirect('jogo?msg=A');
         return;
     }
 
+    var connection = application.config.dbConnection;
+    var JogoDAO = new application.app.models.JogoDAO(connection);
+
+    dadosForm.usuario = req.session.usuario;
+    JogoDAO.acao(dadosForm);
+
+    res.redirect('jogo?msg=B');
 }
